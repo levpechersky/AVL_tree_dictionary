@@ -7,15 +7,20 @@
 #ifndef AVL_HPP_
 #define AVL_HPP_
 
-/* Auxiliary functions, unrelated to AVL tree class */
+/* Auxiliary functions, unrelated to AVL tree class.
+ * Separate namespace to avoid redefinition. */
 namespace aux {
+
 static int abs(int x) {
 	return x < 0 ? -x : x;
 }
 static int max(int x, int y) {
 	return x < y ? y : x;
 }
+
 }
+
+
 
 /* AVL binary search tree
  *
@@ -145,7 +150,9 @@ class AVL {
 	}
 
 	/* Given some node returns it leftmost successor, or node itself,
-	 * if it has no left child
+	 * if it has no left child. Node r may be null.
+	 * @Return: pointer to leftmost successor of r, or to r, if r has no left child.
+	 * @Time complexity: O(h), where h is the height of r's subtree.
 	 */
 	static Node* leftmost(Node* r) {
 		if (!r)
@@ -156,6 +163,7 @@ class AVL {
 		return r;
 	}
 
+	/* AVL Rolls. */
 	static Node* LL_roll(Node* r) {
 		Node *unbalanced = r;
 		r = r->left;
@@ -163,18 +171,11 @@ class AVL {
 		r->right = unbalanced;
 		r->parent = unbalanced->parent;
 		unbalanced->parent = r;
-		unbalanced->left->parent = unbalanced;
+		if(unbalanced->left)
+			unbalanced->left->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
 		return r;
-	}
-	static Node* RL_roll(Node* r) {
-		r->left = LL_roll(r->left);
-		return RR_roll(r);
-	}
-	static Node* LR_roll(Node* r) {
-		r->right = RR_roll(r->right);
-		return LL_roll(r);
 	}
 	static Node* RR_roll(Node* r) {
 		Node *unbalanced = r;
@@ -183,17 +184,31 @@ class AVL {
 		r->left = unbalanced;
 		r->parent = unbalanced->parent;
 		unbalanced->parent = r;
-		unbalanced->right->parent = unbalanced;
+		if(unbalanced->right)
+			unbalanced->right->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
 		return r;
 	}
+	static Node* RL_roll(Node* r) {
+		r->right = LL_roll(r->right);
+		return RR_roll(r);
+	}
+	static Node* LR_roll(Node* r) {
+		r->left = RR_roll(r->left);
+		return LL_roll(r);
+	}
 
-	/* Decides which type of roll to apply, if needed */
+
+	/* Decides which type of roll to apply, if needed.
+	 * If balance factor is valid (i.e. between -1 and 1),
+	 * @Return: updated root of rebalanced sub-tree.
+	 * @Time complexity: O(1)
+	 *  */
 	static Node* check_and_roll(Node* r) {
 		if (balance(r) > 1) {
 			if (balance(r->left) >= 0) {
-				return RR_roll(r);
+				return LL_roll(r);
 			} else {
 				return LR_roll(r);
 			}
@@ -208,6 +223,12 @@ class AVL {
 		}
 	}
 
+	/* Recursive insertion to tree, where tree is rebalanced after insertion.
+	 * This function assumes, that tree doesn't contain an item with given key.
+	 *
+	 * @Return: pointer to updated (after rebalancing) root node
+	 * @Memory complexity: O(h), where h is the height of r's subtree.
+	 * */
 	static Node* insert_r(const Key& k, const Value& v, Node* r) {
 		if (!r)
 			return new Node(k, v);
@@ -225,6 +246,8 @@ class AVL {
 	/* Checks whether given node is the left child of it's parent node.
 	 * If node has no parent (like root node) it isn't left child.
 	 *
+	 * @Return: false if r is null, root (root has no parent), or is right child.
+	 *     true if r has a parent and is it's left child.
 	 */
 	static bool is_leftchild(Node *r) {
 		if (!r || !r->parent)
@@ -236,7 +259,8 @@ public:
 	AVL() :
 			root(nullptr) {
 	}
-	/* Alternative C'tor. Creates tree, which consists of a single leaf */
+	/* Alternative C'tor. Creates tree, which consists of a single leaf
+	 * with given key and value */
 	AVL(const Key& k, const Value& v) :
 			root(nullptr) {
 		root = new Node(k, v);
