@@ -8,11 +8,13 @@
 #define AVL_HPP_
 
 /* Auxiliary functions, unrelated to AVL tree class */
+namespace aux {
 static int abs(int x) {
 	return x < 0 ? -x : x;
 }
 static int max(int x, int y) {
 	return x < y ? y : x;
+}
 }
 
 /* AVL binary search tree
@@ -102,10 +104,13 @@ class AVL {
 		return !(k1 < k2 || k1 > k2);
 	}
 
-	static int height(Node* r) { // TODO maybe extract max
+	/* Calculates actual height, based on subtrees of r.
+	 * Differs from height property: subtrees of r and r itself may be empty.
+	 */
+	static int height(Node* r) {
 		if (!r)
 			return -1;
-		return max(r->right ? r->right->height : -1,
+		return aux::max(r->right ? r->right->height : -1,
 				r->left ? r->left->height : -1) + 1;
 	}
 
@@ -118,7 +123,7 @@ class AVL {
 	/* Undefined for empty nodes */
 	static bool balance_is_invalid(Node* r) {
 		assert(r);
-		return abs(balance(r)) > 1;
+		return aux::abs(balance(r)) > 1;
 	}
 
 	/*
@@ -139,7 +144,9 @@ class AVL {
 		}
 	}
 
-	/* Given some node returns it leftmost successor */
+	/* Given some node returns it leftmost successor, or node itself,
+	 * if it has no left child
+	 */
 	static Node* leftmost(Node* r) {
 		if (!r)
 			return r; // TODO may be unnecessary
@@ -149,48 +156,62 @@ class AVL {
 		return r;
 	}
 
-	/* Returns last (i.e. closest by key) node,
-	 * where new node can be attached.
-	 * For empty tree (i.e. r in null) returns null.
-	 */
-	static Node* last_before_insert(const Key& k, Node* r) {
-		Node* last = nullptr;
-		while (r) {
-			last = r;
-			if (k < r->key) {
-				r = r->left;
-			} else {
-				r = r->right;
-			}
-		}
-		return last;
+	static Node* LL_roll(Node* r) {
+		Node *unbalanced = r;
+		r = r->left;
+		unbalanced->left = r->right;
+		r->right = unbalanced;
+		unbalanced->height = height(unbalanced);
+		r->height = height(r);
+		return r;
+	}
+	static Node* RL_roll(Node* r) {
+		r->left = LL_roll(r->left);
+		return RR_roll(r);
+	}
+	static Node* LR_roll(Node* r) {
+		r->right = RR_roll(r->right);
+		return LL_roll(r);
+	}
+	static Node* RR_roll(Node* r) {
+		Node *unbalanced = r;
+		r = r->right;
+		unbalanced->right = r->left;
+		r->left = unbalanced;
+		unbalanced->height = height(unbalanced);
+		r->height = height(r);
+		return r;
 	}
 
-	/* Maybe should return root, if changed */
-	static Node* insert_r(const Key& k, const Value& v, Node* r) {
-		Node* last = last_before_insert(k, r);
-		r = new Node(k, v);
-		r->parent = last;
-
-		if (k < last->key) {
-			last->left = r;
-		} else {
-			last->right = r;
-		}
-		Node *upper = last, *lower = r;
-		while (upper->parent) {
-			upper = upper->parent;
-			if (height(upper) >= height(lower) + 1)
-				return r;
-			upper->height = height(lower) + 1;
-			if (balance_is_invalid(upper)) {
-
-				;
+	/* Decides which type of roll to apply, if needed */
+	static Node* check_and_roll(Node* r) {
+		if (balance(r) > 1) {
+			if (balance(r->left) >= 0) {
+				return RR_roll(r);
 			} else {
-				lower = upper;
+				return LR_roll(r);
 			}
+		} else if (balance(r) < -1) {
+			if (balance(r->right) <= 0) {
+				return RR_roll(r);
+			} else {
+				return RL_roll(r);
+			}
+		} else {
+			return r;
 		}
-		return r; //TODO make it AVL
+	}
+
+	static Node* insert_r(const Key& k, const Value& v, Node* r) {
+		if (!r)
+			return new Node(k, v);
+		if (k < r->key) {
+			r->left = insert_r(k, v, r->left);
+		} else {
+			r->right = insert_r(k, v, r->right);
+		}
+		r->height = height(r);
+		return check_and_roll(r);
 	}
 
 	/* Checks whether given node is the left child of it's parent node.
@@ -254,7 +275,6 @@ public:
 	bool insert(const Key& k, const Value& v) {
 		if (find(k) != end())
 			return false;
-		// TODO root can be changed, need to update
 		root = insert_r(k, v, root);
 		return true;
 	}

@@ -37,7 +37,7 @@ TEST(AVL_Tree, insert_few_success) {
 	std::vector<char> v = { 'c', 'j', 'a' };
 	AVL<int, char> tree;
 	for (unsigned int i = 0; i < k.size(); ++i) {
-		tree.insert(k[i], v[i]);
+		ASSERT_TRUE(tree.insert(k[i], v[i]));
 	}
 	ASSERT_NE(tree.end(), tree.find(k[0]));
 	ASSERT_NE(tree.end(), tree.find(k[1]));
