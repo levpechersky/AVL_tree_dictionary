@@ -161,6 +161,9 @@ class AVL {
 		r = r->left;
 		unbalanced->left = r->right;
 		r->right = unbalanced;
+		r->parent = unbalanced->parent;
+		unbalanced->parent = r;
+		unbalanced->left->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
 		return r;
@@ -178,6 +181,9 @@ class AVL {
 		r = r->right;
 		unbalanced->right = r->left;
 		r->left = unbalanced;
+		r->parent = unbalanced->parent;
+		unbalanced->parent = r;
+		unbalanced->right->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
 		return r;
@@ -207,8 +213,10 @@ class AVL {
 			return new Node(k, v);
 		if (k < r->key) {
 			r->left = insert_r(k, v, r->left);
+			r->left->parent = r;
 		} else {
 			r->right = insert_r(k, v, r->right);
+			r->right->parent = r;
 		}
 		r->height = height(r);
 		return check_and_roll(r);
