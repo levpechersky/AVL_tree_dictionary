@@ -236,3 +236,52 @@ TEST(AVL_Tree, for_in_compactibility) {
 		ASSERT_NE(std::find(v.begin(), v.end(), x), v.end());
 	}
 }
+
+TEST(AVL_Tree, delete_root_tree_of_only_root) {
+	const int k = 3;
+	const char v = int2char(k);
+	AVL<int, char> tree;
+	tree.insert(k, v);
+	ASSERT_NO_FATAL_FAILURE(tree.remove(k));
+	ASSERT_TRUE(tree.empty());
+}
+
+
+TEST(AVL_Tree, delete_leaf) {
+	std::vector<int> k = { 3, 10, 1 };
+	std::vector<char> v = { 'c', 'j', 'a' };
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree.remove(1));
+	ASSERT_NO_FATAL_FAILURE(tree.remove(10));
+	ASSERT_EQ(tree.find(1), tree.end());
+	ASSERT_EQ(tree.find(10), tree.end());
+	ASSERT_NE(tree.find(3), tree.end());
+}
+
+TEST(AVL_Tree, delete_root_when_root_has_1_leaf) {
+	std::vector<int> k = { 3, 10 };
+	std::vector<char> v = { 'c', 'j' };
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree.remove(10));
+	auto new_root = tree.begin();
+	ASSERT_EQ(*new_root, 'c');
+}
+
+TEST(AVL_Tree, delete_root_when_root_has_2_leaves) {
+	std::vector<int> k = { 3, 10, 1 };
+	std::vector<char> v = { 'c', 'j', 'a' };
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree.remove(3));
+	ASSERT_NE(tree.find(1), tree.end());
+	ASSERT_NE(tree.find(10), tree.end());
+	ASSERT_EQ(tree.find(3), tree.end());
+}

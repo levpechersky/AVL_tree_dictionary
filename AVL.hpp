@@ -14,19 +14,27 @@ namespace aux {
 static int abs(int x) {
 	return x < 0 ? -x : x;
 }
+
 static int max(int x, int y) {
 	return x < y ? y : x;
 }
 
+template<typename T>
+static void swap(T& a, T& b) {
+	T tmp(a);
+	a = b;
+	b = tmp;
+}
 }
 
-
-
-/* AVL binary search tree
+/* AVL binary search tree.
+ * Supports for ranged loops traversal. In-order used, i.e. items will be
+ * sorted in ascending (according to key operator< definition) order.
  *
- * Requirements from Key: has operator < implemented
+ * Requirements from Key: has operator < implemented, copy-constructible,
+ *     assignable.
  * Requirements from Value: Copy-constructible.
- *     Don't have to be default constructible
+ *     Don't have to be default constructible.
  *
  * If not defined otherwise, n is number of nodes in tree,
  * and memory complexity is O(1)
@@ -68,14 +76,7 @@ class AVL {
 		 * @Returns iterator next (in-order) node
 		 */
 		inorderIterator& operator++() {
-			if (node->right) {
-				node = leftmost(node->right);
-			} else {
-				while (!is_leftchild(node) && node->parent) {
-					node = node->parent;
-				}
-				node = node->parent;
-			}
+			node = next_inorder(node);
 			return *this;
 		}
 		inorderIterator operator++(int) {
@@ -101,6 +102,18 @@ class AVL {
 			return *(node->value);
 		}
 	};
+
+	/*
+	 * @Return: pointer to next node in-order
+	 */
+	static Node* next_inorder(Node* node) {
+		if (node->right)
+			return leftmost(node->right);
+		while (!is_leftchild(node) && node->parent) {
+			node = node->parent;
+		}
+		return node->parent;
+	}
 
 	/*
 	 * Test of keys equality, doesn't require == operator
@@ -163,6 +176,12 @@ class AVL {
 		return r;
 	}
 
+	static bool is_leaf(Node* r) {
+		if (!r)
+			return false;
+		return !(r->left || r->right);
+	}
+
 	/* AVL Rolls. */
 	static Node* LL_roll(Node* r) {
 		Node *unbalanced = r;
@@ -171,7 +190,7 @@ class AVL {
 		r->right = unbalanced;
 		r->parent = unbalanced->parent;
 		unbalanced->parent = r;
-		if(unbalanced->left)
+		if (unbalanced->left)
 			unbalanced->left->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
@@ -184,7 +203,7 @@ class AVL {
 		r->left = unbalanced;
 		r->parent = unbalanced->parent;
 		unbalanced->parent = r;
-		if(unbalanced->right)
+		if (unbalanced->right)
 			unbalanced->right->parent = unbalanced;
 		unbalanced->height = height(unbalanced);
 		r->height = height(r);
@@ -198,7 +217,6 @@ class AVL {
 		r->left = RR_roll(r->left);
 		return LL_roll(r);
 	}
-
 
 	/* Decides which type of roll to apply, if needed.
 	 * If balance factor is valid (i.e. between -1 and 1),
@@ -255,6 +273,38 @@ class AVL {
 		return r->parent->left == r;
 	}
 
+	/* Assumes that tree does contain item with key k. */
+	static Node* remove_r(const Key& k, Node *r) {
+		if (!r)
+			return r;
+		if (k < r->key) {
+			r->left = remove_r(k, r->left);
+		} else if (k > r->key) {
+			r->right = remove_r(k, r->right);
+		} else {
+			// TODO complete this
+			if (is_leaf(r)) {
+				delete r;
+				r = nullptr;
+			} else if (!r->right || !r->left) {
+				Node *child = r->right ? r->right : r->left;
+				child->parent = r->parent;
+				if (r->parent) {
+					(is_leftchild(r) ? r->parent->left : r->parent->right) =
+							child;
+				}
+				delete r;
+				r = child;
+			} else {
+				Node* next = next_inorder(r);
+				aux::swap(r->value, next->value);
+				aux::swap(r->key, next->key);
+				remove_r(k, next);
+			}
+		}
+		return r;
+	}
+
 public:
 	AVL() :
 			root(nullptr) {
@@ -267,7 +317,6 @@ public:
 	}
 
 	/*
-	 *
 	 * @Return: in-order iterator to smallest (by definition of Key's < operator) node.
 	 *     If tree is empty - iterator to end()
 	 * @Time complexity: O(log(n))
@@ -303,6 +352,7 @@ public:
 	 *
 	 * @Return: false if item with key is in dictionary.
 	 * @Time complexity: O(log(n)), as find and insert_r both are O(log(n))
+	 * @Memory complexity: O(log(n))
 	 */
 	bool insert(const Key& k, const Value& v) {
 		if (find(k) != end())
@@ -319,7 +369,7 @@ public:
 	void remove(const Key& k) {
 		if (find(k) == end())
 			return;
-		// TODO complete this
+		root = remove_r(k, root);
 	}
 
 };
