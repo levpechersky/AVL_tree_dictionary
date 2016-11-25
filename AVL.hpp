@@ -7,6 +7,14 @@
 #ifndef AVL_HPP_
 #define AVL_HPP_
 
+/* Auxiliary functions, unrelated to AVL tree class */
+static int abs(int x) {
+	return x < 0 ? -x : x;
+}
+static int max(int x, int y) {
+	return x < y ? y : x;
+}
+
 /* AVL binary search tree
  *
  * Requirements from Key: has operator < implemented
@@ -22,12 +30,12 @@ class AVL {
 	struct Node {
 		Key key;
 		Value* value;
-		int r_h, l_h;
+		int height;
 		Node *left, *right, *parent;
 		Node(const Key& key, const Value& value) :
 				key(key),
 						value(nullptr),
-						r_h(0), l_h(0),
+						height(0),
 						left(nullptr),
 						right(nullptr),
 						parent(nullptr) {
@@ -94,16 +102,23 @@ class AVL {
 		return !(k1 < k2 || k1 > k2);
 	}
 
-	/* Undefined for empty nodes */
 	static int height(Node* r) { // TODO maybe extract max
-		assert(r);
-		return ((r->l_h > r->r_h) ? r->l_h : r->r_h) + 1;
+		if (!r)
+			return -1;
+		return max(r->right ? r->right->height : -1,
+				r->left ? r->left->height : -1) + 1;
 	}
 
 	/* Undefined for empty nodes */
-	static int balance(Node* r){
+	static int balance(Node* r) {
 		assert(r);
-		return r->r_h - r->l_h;
+		return height(r->left) - height(r->right);
+	}
+
+	/* Undefined for empty nodes */
+	static bool balance_is_invalid(Node* r) {
+		assert(r);
+		return abs(balance(r)) > 1;
 	}
 
 	/*
@@ -136,6 +151,7 @@ class AVL {
 
 	/* Returns last (i.e. closest by key) node,
 	 * where new node can be attached.
+	 * For empty tree (i.e. r in null) returns null.
 	 */
 	static Node* last_before_insert(const Key& k, Node* r) {
 		Node* last = nullptr;
@@ -150,14 +166,29 @@ class AVL {
 		return last;
 	}
 
+	/* Maybe should return root, if changed */
 	static Node* insert_r(const Key& k, const Value& v, Node* r) {
 		Node* last = last_before_insert(k, r);
 		r = new Node(k, v);
 		r->parent = last;
+
 		if (k < last->key) {
 			last->left = r;
 		} else {
 			last->right = r;
+		}
+		Node *upper = last, *lower = r;
+		while (upper->parent) {
+			upper = upper->parent;
+			if (height(upper) >= height(lower) + 1)
+				return r;
+			upper->height = height(lower) + 1;
+			if (balance_is_invalid(upper)) {
+
+				;
+			} else {
+				lower = upper;
+			}
 		}
 		return r; //TODO make it AVL
 	}
@@ -223,7 +254,8 @@ public:
 	bool insert(const Key& k, const Value& v) {
 		if (find(k) != end())
 			return false;
-		empty() ? root = new Node(k, v) : insert_r(k, v, root);
+		// TODO root can be changed, need to update
+		root = insert_r(k, v, root);
 		return true;
 	}
 
