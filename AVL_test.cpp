@@ -280,9 +280,9 @@ TEST(AVL_Tree, delete_no_roll_root_when_root_has_1_leaf) {
 	for (unsigned int i = 0; i < k.size(); ++i) {
 		tree.insert(k[i], v[i]);
 	}
-	ASSERT_NO_FATAL_FAILURE(tree.remove(10));
+	ASSERT_NO_FATAL_FAILURE(tree.remove(3));
 	auto new_root = tree.begin();
-	ASSERT_EQ(*new_root, 'c');
+	ASSERT_EQ(*new_root, 'j');
 }
 
 TEST(AVL_Tree, delete_no_roll_root_when_root_has_2_leaves) {
@@ -298,13 +298,111 @@ TEST(AVL_Tree, delete_no_roll_root_when_root_has_2_leaves) {
 	ASSERT_EQ(tree.find(3), tree.end());
 }
 
-// TODO add more deletion tests
+TEST(AVL_Tree, delete_roll_RL) {
+	std::vector<int> k = { 20, 10, 30, 25 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	const int to_delete = 10;
+	ASSERT_NO_FATAL_FAILURE(tree.remove(to_delete));
+	for (auto x : k) {
+		if (x != to_delete) {
+			ASSERT_NE(tree.find(x), tree.end());
+		} else {
+			ASSERT_EQ(tree.find(x), tree.end());
+		}
+	}
+}
+
+TEST(AVL_Tree, delete_roll_RR) {
+	std::vector<int> k = { 20, 10, 30, 35 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	const int to_delete = 10;
+	ASSERT_NO_FATAL_FAILURE(tree.remove(to_delete));
+	for (auto x : k) {
+		if (x != to_delete) {
+			ASSERT_NE(tree.find(x), tree.end());
+		} else {
+			ASSERT_EQ(tree.find(x), tree.end());
+		}
+	}
+}
+TEST(AVL_Tree, delete_roll_LR) {
+	std::vector<int> k = { 20, 10, 30, 15 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	const int to_delete = 30;
+	ASSERT_NO_FATAL_FAILURE(tree.remove(to_delete));
+	for (auto x : k) {
+		if (x != to_delete) {
+			ASSERT_NE(tree.find(x), tree.end());
+		} else {
+			ASSERT_EQ(tree.find(x), tree.end());
+		}
+	}
+}
+TEST(AVL_Tree, delete_roll_LL) {
+	std::vector<int> k = { 20, 10, 30, 5 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	const int to_delete = 30;
+	ASSERT_NO_FATAL_FAILURE(tree.remove(to_delete));
+	for (auto x : k) {
+		if (x != to_delete) {
+			ASSERT_NE(tree.find(x), tree.end());
+		} else {
+			ASSERT_EQ(tree.find(x), tree.end());
+		}
+	}
+}
 
 TEST(AVL_Tree, tree_of_trees_creation) {
 	AVL<int, AVL<int, char>> tree;
 	AVL<int, char> inner_tree;
 	ASSERT_TRUE(tree.insert(100, inner_tree));
 	ASSERT_TRUE((*tree.find(100)).insert(1, 'a'));
+}
+
+TEST(AVL_Tree, merge_left_empty) {
+	std::vector<int> k = { 2, 16, 40, 31, 7, 5, 32, 11, 17 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree1, tree2;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree1.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree1.merge(tree2));
+	std::vector<int> merged;
+	merged.insert(merged.end(), k.begin(), k.end());
+	for (auto k : merged) {
+		ASSERT_NE(tree1.find(k), tree1.end());
+	}
+}
+
+TEST(AVL_Tree, merge_right_empty) {
+	std::vector<int> k = { 2, 16, 40, 31, 7, 5, 32, 11, 17 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree1, tree2;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree2.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree1.merge(tree2));
+	std::vector<int> merged;
+	merged.insert(merged.end(), k.begin(), k.end());
+	for (auto k : merged) {
+		ASSERT_NE(tree1.find(k), tree1.end());
+	}
 }
 
 TEST(AVL_Tree, merge_all_keys_unique) {
@@ -328,5 +426,25 @@ TEST(AVL_Tree, merge_all_keys_unique) {
 	}
 }
 
-// TODO check merge case with same keys
+TEST(AVL_Tree, merge_some_keys_same) {
+	std::vector<int> k1 = { 2, 16, 32, 11, 17 };
+	std::vector<char> v1 = int2char(k1);
+	std::vector<int> k2 = { 10, 5, 11, 18, 15, 22, 17, 25 };
+	std::vector<char> v2 = int2char(k2);
+	AVL<int, char> tree1, tree2;
+	for (unsigned int i = 0; i < k1.size(); ++i) {
+		tree1.insert(k1[i], v1[i]);
+	}
+	for (unsigned int i = 0; i < k2.size(); ++i) {
+		tree2.insert(k2[i], v2[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree1.merge(tree2));
+	std::vector<int> merged;
+	merged.insert(merged.end(), k1.begin(), k1.end());
+	merged.insert(merged.end(), k2.begin(), k2.end());
+	for (auto k : merged) {
+		ASSERT_NE(tree1.find(k), tree1.end());
+	}
+}
 
+// TODO check merge case with same keys

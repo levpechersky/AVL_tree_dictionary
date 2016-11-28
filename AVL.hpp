@@ -11,9 +11,9 @@
  * Separate namespace to avoid redefinition. */
 namespace aux {
 
-static int abs(int x) {
-	return x < 0 ? -x : x;
-}
+//static int abs(int x) {
+//	return x < 0 ? -x : x;
+//}
 
 static int max(int x, int y) {
 	return x < y ? y : x;
@@ -72,7 +72,7 @@ class AVL {
 	Node *root;
 
 	class inorderIterator {
-		friend class AVL<Key, Value>;
+		friend class AVL<Key, Value> ;
 		Node *node;
 		inorderIterator(Node* node = nullptr) :
 				node(node) {
@@ -160,11 +160,11 @@ class AVL {
 		return height(r->left) - height(r->right);
 	}
 
-	/* Undefined for empty nodes */
-	static bool balance_is_invalid(Node* r) {
-		assert(r);
-		return aux::abs(balance(r)) > 1;
-	}
+//	/* Undefined for empty nodes */
+//	static bool balance_is_invalid(Node* r) {
+//		assert(r);
+//		return aux::abs(balance(r)) > 1;
+//	}
 
 	/*
 	 * Recursive search in tree.
@@ -321,7 +321,7 @@ class AVL {
 				remove_r(k, next);
 			}
 		}
-		if(!r)
+		if (!r)
 			return r;
 		r->height = height(r);
 		return check_and_roll(r);
@@ -414,7 +414,7 @@ class AVL {
 			if (l != l_end) {
 				current = l++;
 			} else { // r != r_end
-				current = r++;
+				current = r++; // TODO test uncovered
 			}
 			keys[i] = current.key();
 			values[i] = new Value(current.value());
@@ -437,6 +437,31 @@ public:
 	AVL(const Key& k, const Value& v) :
 			root(nullptr) {
 		root = new Node(k, v); // TODO test uncovered
+	}
+
+	/* Copy C'tor.
+	 * Resulting tree will not be exact copy of original tree.
+	 * It will contain all nodes, but tree structure may differ.
+	 * @Time complexity: O(m), where m is number of nodes in tree t.
+	 * @Memory complexity: O(m)
+	 * */
+	AVL(const AVL& t) :
+			root(nullptr) {
+		merge(t); // TODO test uncovered
+	}
+
+	/* Assignment operator.
+	 * Resulting tree will not be exact copy of original tree.
+	 * It will contain all nodes, but tree structure may differ.
+	 * @Time complexity: O(n + m), where m is number of nodes in tree t.
+	 * @Memory complexity: O(n + m)
+	 */
+	AVL& operator=(const AVL& t) {
+		if (this != &t) {
+			clear();
+			merge(t);
+		}
+		return *this;
 	}
 
 	/*
