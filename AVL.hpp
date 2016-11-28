@@ -8,13 +8,8 @@
 #define AVL_HPP_
 
 /* Auxiliary functions, unrelated to AVL tree class.
- * Separate namespace to avoid redefinition. */
+ * Separate namespace to avoid names collision. */
 namespace aux {
-
-//static int abs(int x) {
-//	return x < 0 ? -x : x;
-//}
-
 static int max(int x, int y) {
 	return x < y ? y : x;
 }
@@ -55,11 +50,11 @@ class AVL {
 		Node *left, *right, *parent;
 		Node(const Key& key, const Value& value) :
 				key(key),
-						value(nullptr),
-						height(0),
-						left(nullptr),
-						right(nullptr),
-						parent(nullptr) {
+				value(nullptr),
+				height(0),
+				left(nullptr),
+				right(nullptr),
+				parent(nullptr) {
 			this->value = new Value(value);
 		}
 		Node(const Node&) = delete;
@@ -74,9 +69,7 @@ class AVL {
 	class inorderIterator {
 		friend class AVL<Key, Value> ;
 		Node *node;
-		inorderIterator(Node* node = nullptr) :
-				node(node) {
-		}
+		inorderIterator(Node* node = nullptr) :	node(node) {}
 
 	public:
 
@@ -97,7 +90,7 @@ class AVL {
 			return copy;
 		}
 
-		/* Iterators are compared by adresses of nodes they point to in memory
+		/* Iterators are compared by adresses of nodes they point to in memory.
 		 */
 		bool operator==(const inorderIterator& it) const {
 			return this->node == it.node;
@@ -118,7 +111,8 @@ class AVL {
 		Key key() const {
 			return node->key;
 		}
-		/* Return accessible reference to value */
+		/* Return accessible reference to value. Same as operator*,
+		 * added for consistency with key() function */
 		Value& value() const {
 			return *(node->value);
 		}
@@ -192,11 +186,6 @@ class AVL {
 		return node->parent;
 	}
 
-//	/* Undefined for empty nodes */
-//	static bool balance_is_invalid(Node* r) {
-//		assert(r);
-//		return aux::abs(balance(r)) > 1;
-//	}
 	/* Decides which type of roll to apply, if needed.
 	 * If balance factor is valid (i.e. between -1 and 1),
 	 * @Return: updated root of rebalanced sub-tree.
@@ -262,6 +251,7 @@ class AVL {
 		r->height = height(r);
 		return r;
 	}
+
 	static Node* RR_roll(Node* r) {
 		Node *unbalanced = r;
 		r = r->right;
@@ -275,10 +265,12 @@ class AVL {
 		r->height = height(r);
 		return r;
 	}
+
 	static Node* RL_roll(Node* r) {
 		r->right = LL_roll(r->right);
 		return RR_roll(r);
 	}
+
 	static Node* LR_roll(Node* r) {
 		r->left = RR_roll(r->left);
 		return LL_roll(r);
@@ -354,6 +346,9 @@ class AVL {
 		return check_and_roll(r);
 	}
 
+	/*
+	 * @Return: number of nodes in the subtree of r
+	 */
 	static int size_r(Node *r) {
 		if (!r)
 			return 0;
@@ -371,8 +366,12 @@ class AVL {
 
 	/* Gets two sorted arrays, of keys and pointers to values
 	 * (to allow values to be not default-constructible)
-	 * Arrays must be sorted.
+	 * Array of keys must be sorted.
 	 * Constructs AVL tree recursively.
+	 *
+	 * @Return: root of the new tree.
+	 * @Time complexity: O(p), where p is size of array, i.e. initial (to-from).
+	 * @Memory complexity: O(log(p))
 	 */
 	static Node *tree_from_array(Key* k_arr, Value** v_arr, int from, int to) {
 		if (from > to)
@@ -426,15 +425,12 @@ public:
 	/* Default C'tor. Creates empty tree.
 	 * @Time complexity: O(1)
 	 */
-	AVL() :
-			root(nullptr) {
-	}
+	AVL() :	root(nullptr) {}
 	/* Alternative C'tor. Creates tree, which consists of a single leaf
 	 * with given key and value
 	 * @Time complexity: O(1)
 	 */
-	AVL(const Key& k, const Value& v) :
-			root(nullptr) {
+	AVL(const Key& k, const Value& v) :	root(nullptr) {
 		root = new Node(k, v); // TODO test uncovered
 	}
 
@@ -445,8 +441,7 @@ public:
 	 * @Time complexity: O(m), where m is number of nodes in tree t.
 	 * @Memory complexity: O(m)
 	 * */
-	AVL(const AVL& t) :
-			root(nullptr) {
+	AVL(const AVL& t) :	root(nullptr) {
 		merge(t); // TODO test uncovered
 	}
 
