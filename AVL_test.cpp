@@ -446,5 +446,3 @@ TEST(AVL_Tree, merge_some_keys_same) {
 		ASSERT_NE(tree1.find(k), tree1.end());
 	}
 }
-
-// TODO check merge case with same keys

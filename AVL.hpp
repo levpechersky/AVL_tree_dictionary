@@ -125,18 +125,6 @@ class AVL {
 	};
 
 	/*
-	 * @Return: pointer to next node in-order
-	 */
-	static Node* next_inorder(Node* node) {
-		if (node->right)
-			return leftmost(node->right);
-		while (!is_leftchild(node) && node->parent) {
-			node = node->parent;
-		}
-		return node->parent;
-	}
-
-	/*
 	 * Test of keys equality, doesn't require == operator
 	 */
 	static bool equal(const Key& k1, const Key& k2) {
@@ -160,28 +148,22 @@ class AVL {
 		return height(r->left) - height(r->right);
 	}
 
-//	/* Undefined for empty nodes */
-//	static bool balance_is_invalid(Node* r) {
-//		assert(r);
-//		return aux::abs(balance(r)) > 1;
-//	}
-
-	/*
-	 * Recursive search in tree.
-	 *
-	 * @Return: nullptr if node with key k not present,
-	 *    pointer to node otherwise.
-	 */
-	static Node* find_r(const Key& k, Node* r) {
+	static bool is_leaf(Node* r) {
 		if (!r)
-			return nullptr;
-		if (equal(k, r->key)) {
-			return r;
-		} else if (k < r->key) {
-			return find_r(k, r->left);
-		} else {
-			return find_r(k, r->right);
-		}
+			return false;
+		return !(r->left || r->right);
+	}
+
+	/* Checks whether given node is the left child of it's parent node.
+	 * If node has no parent (like root node) it isn't left child.
+	 *
+	 * @Return: false if r is null, root (root has no parent), or is right child.
+	 *     true if r has a parent and is it's left child.
+	 */
+	static bool is_leftchild(Node *r) {
+		if (!r || !r->parent)
+			return false;
+		return r->parent->left == r;
 	}
 
 	/* Given some node returns it leftmost successor, or node itself,
@@ -198,10 +180,72 @@ class AVL {
 		return r;
 	}
 
-	static bool is_leaf(Node* r) {
-		if (!r)
-			return false;
-		return !(r->left || r->right);
+	/*
+	 * @Return: pointer to next node in-order
+	 */
+	static Node* next_inorder(Node* node) {
+		if (node->right)
+			return leftmost(node->right);
+		while (!is_leftchild(node) && node->parent) {
+			node = node->parent;
+		}
+		return node->parent;
+	}
+
+//	/* Undefined for empty nodes */
+//	static bool balance_is_invalid(Node* r) {
+//		assert(r);
+//		return aux::abs(balance(r)) > 1;
+//	}
+	/* Decides which type of roll to apply, if needed.
+	 * If balance factor is valid (i.e. between -1 and 1),
+	 * @Return: updated root of rebalanced sub-tree.
+	 * @Time complexity: O(1)
+	 *  */
+	static Node* check_and_roll(Node* r) {
+		if (balance(r) > 1) {
+			if (balance(r->left) >= 0) {
+				return LL_roll(r);
+			} else {
+				return LR_roll(r);
+			}
+		} else if (balance(r) < -1) {
+			if (balance(r->right) <= 0) {
+				return RR_roll(r);
+			} else {
+				return RL_roll(r);
+			}
+		} else {
+			return r;
+		}
+	}
+
+	/* Changes child node of parent of given old_child node.
+	 * For nodes with no parent (i.e. root) does nothing.
+	 * Assumes old_child isn't null.
+	 * Used when swapping nodes in tree (e.g. rolls)
+	 */
+	static void set_child_of_parent(Node* old_child, Node* new_child) {
+		assert(old_child);
+		if (old_child->parent) {
+			if (is_leftchild(old_child)) {
+				old_child->parent->left = new_child;
+			} else {
+				old_child->parent->right = new_child;
+			}
+		}
+	}
+
+	/* Changes parent pointer of given node children (if any) to point to the
+	 * given node. Used when swapping nodes in tree (e.g. rolls)
+	 * Assumes parent isn't null.
+	 */
+	static void set_parent_of_children(Node* parent) {
+		assert(parent);
+		if (parent->left)
+			parent->left->parent = parent;
+		if (parent->right)
+			parent->right->parent = parent;
 	}
 
 	/* AVL Rolls. */
@@ -240,26 +284,21 @@ class AVL {
 		return LL_roll(r);
 	}
 
-	/* Decides which type of roll to apply, if needed.
-	 * If balance factor is valid (i.e. between -1 and 1),
-	 * @Return: updated root of rebalanced sub-tree.
-	 * @Time complexity: O(1)
-	 *  */
-	static Node* check_and_roll(Node* r) {
-		if (balance(r) > 1) {
-			if (balance(r->left) >= 0) {
-				return LL_roll(r);
-			} else {
-				return LR_roll(r);
-			}
-		} else if (balance(r) < -1) {
-			if (balance(r->right) <= 0) {
-				return RR_roll(r);
-			} else {
-				return RL_roll(r);
-			}
-		} else {
+	/*
+	 * Recursive search in tree.
+	 *
+	 * @Return: nullptr if node with key k not present,
+	 *    pointer to node otherwise.
+	 */
+	static Node* find_r(const Key& k, Node* r) {
+		if (!r)
+			return nullptr;
+		if (equal(k, r->key)) {
 			return r;
+		} else if (k < r->key) {
+			return find_r(k, r->left);
+		} else {
+			return find_r(k, r->right);
 		}
 	}
 
@@ -281,18 +320,6 @@ class AVL {
 		}
 		r->height = height(r);
 		return check_and_roll(r);
-	}
-
-	/* Checks whether given node is the left child of it's parent node.
-	 * If node has no parent (like root node) it isn't left child.
-	 *
-	 * @Return: false if r is null, root (root has no parent), or is right child.
-	 *     true if r has a parent and is it's left child.
-	 */
-	static bool is_leftchild(Node *r) {
-		if (!r || !r->parent)
-			return false;
-		return r->parent->left == r;
 	}
 
 	/* Assumes that tree does contain item with key k. */
@@ -358,34 +385,6 @@ class AVL {
 		return tmp_root;
 	}
 
-	/* Changes child node of parent of given old_child node.
-	 * For nodes with no parent (i.e. root) does nothing.
-	 * Assumes old_child isn't null.
-	 * Used when swapping nodes in tree (e.g. rolls)
-	 */
-	static void set_child_of_parent(Node* old_child, Node* new_child) {
-		assert(old_child);
-		if (old_child->parent) {
-			if (is_leftchild(old_child)) {
-				old_child->parent->left = new_child;
-			} else {
-				old_child->parent->right = new_child;
-			}
-		}
-	}
-
-	/* Changes parent pointer of given node children (if any) to point to the
-	 * given node. Used when swapping nodes in tree (e.g. rolls)
-	 * Assumes parent isn't null.
-	 */
-	static void set_parent_of_children(Node* parent) {
-		assert(parent);
-		if (parent->left)
-			parent->left->parent = parent;
-		if (parent->right)
-			parent->right->parent = parent;
-	}
-
 	/* Helper function for trees merging.
 	 * Gets 2 trees (this and t) and fills two given and !allocated! arrays
 	 * with keys and values of both trees in ascending order of keys.
@@ -442,6 +441,7 @@ public:
 	/* Copy C'tor.
 	 * Resulting tree will not be exact copy of original tree.
 	 * It will contain all nodes, but tree structure may differ.
+	 *
 	 * @Time complexity: O(m), where m is number of nodes in tree t.
 	 * @Memory complexity: O(m)
 	 * */
@@ -453,6 +453,8 @@ public:
 	/* Assignment operator.
 	 * Resulting tree will not be exact copy of original tree.
 	 * It will contain all nodes, but tree structure may differ.
+	 *
+	 * @Return: *this
 	 * @Time complexity: O(n + m), where m is number of nodes in tree t.
 	 * @Memory complexity: O(n + m)
 	 */
@@ -464,7 +466,8 @@ public:
 		return *this;
 	}
 
-	/*
+	/* Returns an in-order iterator to the first element of the container.
+	 *
 	 * @Return: in-order iterator to smallest (by definition of Key's
 	 *     < operator) node. If tree is empty - iterator to end()
 	 * @Time complexity: O(log(n))
@@ -473,7 +476,10 @@ public:
 		return inorderIterator(leftmost(root));
 	}
 
-	/*
+	/* Returns an iterator to the element following the last (i.e largest)
+	 * element of the tree. This element acts as a placeholder, attempting to
+	 * access it results in undefined behavior.
+	 *
 	 * @Return: iterator to empty/non-existing node.
 	 *     This iterator should be never dereferenced or incremented.
 	 * @Time complexity: O(1)
@@ -482,14 +488,16 @@ public:
 		return inorderIterator();
 	}
 
-	/* @Return: true if tree is empty, i.e doesn't contain any nodes.
+	/* Checks whether the tree is empty, i.e. contains no nodes.
+	 *
+	 * @Return: true if tree is empty, i.e doesn't contain any nodes.
 	 * @Time complexity: O(1)
 	 */
 	bool empty() const {
 		return !root;
 	}
 
-	/*
+	/* Searches the tree for item with key k.
 	 *
 	 * @Return: in-order iterator to element with key k, or iterator to end()
 	 *     if item isn't present.
@@ -500,7 +508,7 @@ public:
 		return inorderIterator(find_r(k, root));
 	}
 
-	/* Insert an item with given key and value.
+	/* Inserts an item with given key k and value v.
 	 * If item is already present - tree stays unchanged, and false returned.
 	 *
 	 * @Return: false if item with key is in dictionary.
@@ -514,9 +522,9 @@ public:
 		return true;
 	}
 
-	/*
-	 *
+	/* Removes an element with key k from the tree.
 	 * If element with Key k isn't present - does nothing.
+	 *
 	 * @Time complexity: O(log(n))
 	 * @Memory complexity: O(log(n))
 	 */
@@ -526,7 +534,8 @@ public:
 		root = remove_r(k, root);
 	}
 
-	/*
+	/* Counts number of nodes in tree.
+	 *
 	 * @Return: number of nodes in tree
 	 * @Time complexity: O(n)
 	 * @Memory complexity: O(log(n))
@@ -546,20 +555,28 @@ public:
 	}
 
 	/* Efficient tree merge.
-	 * Left tree will contain all unique nodes from both trees,
-	 * right stays unchanged. All pointers, iterators and references of the
-	 * left tree are invalidated.
-	 *
+	 * Trees' nodes are copied to sorted temporary array and then merged tree
+	 * is built, as if merged array was in-order of existing tree.
+	 * Left tree will contain all unique nodes from both trees, right tree
+	 * stays unchanged.
 	 * If there's same keys, data from left tree will be taken.
+	 *
+	 * All pointers, iterators and references of the left tree are invalidated.
 	 *
 	 * @Time complexity: O(m+n), where m and n are numbers of nodes in current
 	 *     and joining tree.
 	 * @Memory complexity: O(m+n)
 	 */
 	void merge(const AVL<Key, Value>& t) {
-		int merged_size = size() + t.size(); // m + n
+		int merged_size = size() + t.size();
 		Key* keys = new Key[merged_size];
-		Value** values = new Value*[merged_size];
+		Value** values;
+		try {
+			values = new Value*[merged_size];
+		} catch (std::bad_alloc&) {
+			delete[] keys;
+			throw;
+		}
 		merged_size = trees_to_arrays(t, keys, values);
 		Node * tmp_root = tree_from_array(keys, values, 0, merged_size - 1);
 		clear();
