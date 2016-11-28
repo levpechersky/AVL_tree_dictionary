@@ -34,6 +34,8 @@ static void swap(T& a, T& b) {
  * @Iterators and references invalidation:
  * All iterators are invalidated after each operation, that changes the tree.
  * All references are valid after insertion, and invalidated after deletion.
+ * All iterators, references and pointers are invalidated after
+ *     merging (for the left operand only).
  *
  * @Requirements from Key: has operator< implemented, copy-constructible,
  *     assignable.
@@ -70,21 +72,25 @@ class AVL {
 	Node *root;
 
 	class inorderIterator {
+		friend class AVL<Key, Value>;
 		Node *node;
-
-	public:
 		inorderIterator(Node* node = nullptr) :
 				node(node) {
 		}
 
+	public:
+
 		/* !IMPORTANT! iterator must be validated before.
 		 *     ++ on invalid iterators (e.g. end()) is undefined.
 		 * @Return: iterator pointing to next (in-order) node
+		 * @Time complexity: O(log(n)) in worst case, but full traversal
+		 *     takes O(n) time.
 		 */
 		inorderIterator& operator++() {
 			node = next_inorder(node);
 			return *this;
 		}
+		/* Postfix version. */
 		inorderIterator operator++(int) {
 			inorderIterator copy(*this);
 			++(*this);
@@ -139,6 +145,7 @@ class AVL {
 
 	/* Calculates actual height, based on subtrees of r.
 	 * Differs from height property: subtrees of r and r itself may be empty.
+	 * @Time complexity: O(1)
 	 */
 	static int height(Node* r) {
 		if (!r)
@@ -184,7 +191,7 @@ class AVL {
 	 */
 	static Node* leftmost(Node* r) {
 		if (!r)
-			return r; // TODO may be unnecessary
+			return r;
 		while (r->left) {
 			r = r->left;
 		}
@@ -289,7 +296,7 @@ class AVL {
 	}
 
 	/* Assumes that tree does contain item with key k. */
-	static Node* remove_r(const Key& k, Node *r) { // FIXME
+	static Node* remove_r(const Key& k, Node *r) {
 		if (!r)
 			return r;
 		if (k < r->key) {
@@ -297,21 +304,14 @@ class AVL {
 		} else if (k > r->key) {
 			r->right = remove_r(k, r->right);
 		} else {
-			// TODO complete this
-			if (is_leaf(r)) {
-				if (r->parent) {
-					(is_leftchild(r) ? r->parent->left : r->parent->right) =
-							nullptr; // TODO refactor
-				}
+			if (is_leaf(r)) { // no children
+				set_child_of_parent(r, nullptr);
 				delete r;
 				r = nullptr;
 			} else if (!r->right || !r->left) { // 1 child
 				Node *child = r->right ? r->right : r->left;
 				child->parent = r->parent;
-				if (r->parent) {
-					(is_leftchild(r) ? r->parent->left : r->parent->right) =
-							child;
-				}
+				set_child_of_parent(r, child);
 				delete r;
 				r = child;
 			} else { // 2 children
@@ -321,7 +321,10 @@ class AVL {
 				remove_r(k, next);
 			}
 		}
-		return r; // TODO currently not AVL
+		if(!r)
+			return r;
+		r->height = height(r);
+		return check_and_roll(r);
 	}
 
 	static int size_r(Node *r) {
@@ -330,6 +333,7 @@ class AVL {
 		return 1 + size_r(r->left) + size_r(r->right);
 	}
 
+	/* Frees all nodes recursively */
 	static void destroy_r(Node *r) {
 		if (!r)
 			return;
@@ -349,33 +353,101 @@ class AVL {
 		int mid = (from + to) / 2;
 		Node *tmp_root = new Node(k_arr[mid], *(v_arr[mid]));
 		tmp_root->left = tree_from_array(k_arr, v_arr, from, mid - 1);
-		if (tmp_root->left)
-			tmp_root->left->parent = tmp_root;
 		tmp_root->right = tree_from_array(k_arr, v_arr, mid + 1, to);
-		if (tmp_root->right)
-			tmp_root->right->parent = tmp_root;
+		set_parent_of_children(tmp_root);
 		return tmp_root;
 	}
 
+	/* Changes child node of parent of given old_child node.
+	 * For nodes with no parent (i.e. root) does nothing.
+	 * Assumes old_child isn't null.
+	 * Used when swapping nodes in tree (e.g. rolls)
+	 */
+	static void set_child_of_parent(Node* old_child, Node* new_child) {
+		assert(old_child);
+		if (old_child->parent) {
+			if (is_leftchild(old_child)) {
+				old_child->parent->left = new_child;
+			} else {
+				old_child->parent->right = new_child;
+			}
+		}
+	}
+
+	/* Changes parent pointer of given node children (if any) to point to the
+	 * given node. Used when swapping nodes in tree (e.g. rolls)
+	 * Assumes parent isn't null.
+	 */
+	static void set_parent_of_children(Node* parent) {
+		assert(parent);
+		if (parent->left)
+			parent->left->parent = parent;
+		if (parent->right)
+			parent->right->parent = parent;
+	}
+
+	/* Helper function for trees merging.
+	 * Gets 2 trees (this and t) and fills two given and !allocated! arrays
+	 * with keys and values of both trees in ascending order of keys.
+	 *
+	 * After merging, output arrays keys and values will only contain unique
+	 * keys. If there are same keys, value from the left tree will be taken.
+	 *
+	 *
+	 * @Return: number of unique keys in merged array.
+	 * @Time complexity: O(m+n), where m and n are numbers of nodes in current
+	 *     and joining tree.
+	 * @Memory complexity: O(m+n)
+	 * */
+	int trees_to_arrays(const AVL<Key, Value>& t, Key* keys, Value** values) {
+		auto l = begin(), r = t.begin(), l_end = end(), r_end = t.end();
+		int i = 0;
+		while (l != l_end || r != r_end) {
+			inorderIterator current;
+			if (l != l_end && r != r_end) {
+				if (r.key() < l.key()) {
+					current = r++;
+				} else {
+					current = l++;
+				}
+			} else
+			if (l != l_end) {
+				current = l++;
+			} else { // r != r_end
+				current = r++;
+			}
+			keys[i] = current.key();
+			values[i] = new Value(current.value());
+			++i;
+		}
+		return i;
+	}
+
 public:
+	/* Default C'tor. Creates empty tree.
+	 * @Time complexity: O(1)
+	 */
 	AVL() :
 			root(nullptr) {
 	}
 	/* Alternative C'tor. Creates tree, which consists of a single leaf
-	 * with given key and value */
+	 * with given key and value
+	 * @Time complexity: O(1)
+	 */
 	AVL(const Key& k, const Value& v) :
 			root(nullptr) {
-		root = new Node(k, v);
+		root = new Node(k, v); // TODO test uncovered
 	}
 
 	/*
-	 * @Return: in-order iterator to smallest (by definition of Key's < operator) node.
-	 *     If tree is empty - iterator to end()
+	 * @Return: in-order iterator to smallest (by definition of Key's
+	 *     < operator) node. If tree is empty - iterator to end()
 	 * @Time complexity: O(log(n))
 	 */
 	inorderIterator begin() const {
 		return inorderIterator(leftmost(root));
 	}
+
 	/*
 	 * @Return: iterator to empty/non-existing node.
 	 *     This iterator should be never dereferenced or incremented.
@@ -449,7 +521,7 @@ public:
 	}
 
 	/* Efficient tree merge.
-	 * Left operand will contain all unique nodes from both trees,
+	 * Left tree will contain all unique nodes from both trees,
 	 * right stays unchanged. All pointers, iterators and references of the
 	 * left tree are invalidated.
 	 *
@@ -459,38 +531,12 @@ public:
 	 *     and joining tree.
 	 * @Memory complexity: O(m+n)
 	 */
-	// TODO check case with same keys
 	void merge(const AVL<Key, Value>& t) {
-		int m_size = size() + t.size(); //O(m + n)
-		Key* keys = new Key[m_size];
-		Value** values = new Value*[m_size];
-		//output to arrays
-		auto l = begin(), r = t.begin(), l_end = end(), r_end = t.end();
-		int i = 0;
-		while (l != l_end || r != r_end) { //O(m + n)
-			if (l != l_end && r != r_end) {
-				if (r.key() < l.key()) {
-					keys[i] = r.key();
-					values[i] = new Value(r.value());
-					++r;
-				} else {
-					keys[i] = l.key();
-					values[i] = new Value(l.value());
-					++l;
-				}
-			} else if (l != l_end) {
-				keys[i] = l.key();
-				values[i] = new Value(l.value());
-				++l;
-			} else { // r != r_end
-				keys[i] = r.key();
-				values[i] = new Value(r.value()); //TODO refactor
-				++r;
-			}
-			++i;
-		}
-		m_size = i; //It may happen, that i<m+n because of repeating keys
-		Node * tmp_root = tree_from_array(keys, values, 0, m_size - 1);
+		int merged_size = size() + t.size(); // m + n
+		Key* keys = new Key[merged_size];
+		Value** values = new Value*[merged_size];
+		merged_size = trees_to_arrays(t, keys, values);
+		Node * tmp_root = tree_from_array(keys, values, 0, merged_size - 1);
 		clear();
 		root = tmp_root;
 		delete[] values;

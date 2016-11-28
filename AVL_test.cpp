@@ -246,7 +246,20 @@ TEST(AVL_Tree, delete_root_tree_of_only_root) {
 	ASSERT_TRUE(tree.empty());
 }
 
-TEST(AVL_Tree, delete_leaf) {
+TEST(AVL_Tree, delete_unexisting_node_tree_unchanged) {
+	std::vector<int> k = { 2, 16, 40, 31, 7, 5, 32, 11, 17 };
+	std::vector<char> v = int2char(k);
+	AVL<int, char> tree;
+	for (unsigned int i = 0; i < k.size(); ++i) {
+		tree.insert(k[i], v[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree.remove(-1));
+	for (auto i : k) {
+		ASSERT_NE(tree.find(i), tree.end());
+	}
+}
+
+TEST(AVL_Tree, delete_no_roll_leaf) {
 	std::vector<int> k = { 3, 10, 1 };
 	std::vector<char> v = { 'c', 'j', 'a' };
 	AVL<int, char> tree;
@@ -260,7 +273,7 @@ TEST(AVL_Tree, delete_leaf) {
 	ASSERT_NE(tree.find(3), tree.end());
 }
 
-TEST(AVL_Tree, delete_root_when_root_has_1_leaf) {
+TEST(AVL_Tree, delete_no_roll_root_when_root_has_1_leaf) {
 	std::vector<int> k = { 3, 10 };
 	std::vector<char> v = { 'c', 'j' };
 	AVL<int, char> tree;
@@ -272,7 +285,7 @@ TEST(AVL_Tree, delete_root_when_root_has_1_leaf) {
 	ASSERT_EQ(*new_root, 'c');
 }
 
-TEST(AVL_Tree, delete_root_when_root_has_2_leaves) {
+TEST(AVL_Tree, delete_no_roll_root_when_root_has_2_leaves) {
 	std::vector<int> k = { 3, 10, 1 };
 	std::vector<char> v = { 'c', 'j', 'a' };
 	AVL<int, char> tree;
@@ -314,3 +327,6 @@ TEST(AVL_Tree, merge_all_keys_unique) {
 		ASSERT_NE(tree1.find(k), tree1.end());
 	}
 }
+
+// TODO check merge case with same keys
+
