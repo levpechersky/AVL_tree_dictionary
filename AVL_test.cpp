@@ -232,7 +232,7 @@ TEST(AVL_Tree, for_in_compactibility) {
 	for (unsigned int i = 0; i < k.size(); ++i) {
 		tree.insert(k[i], v[i]);
 	}
-	for(auto x : tree){
+	for (auto x : tree) {
 		ASSERT_NE(std::find(v.begin(), v.end(), x), v.end());
 	}
 }
@@ -245,7 +245,6 @@ TEST(AVL_Tree, delete_root_tree_of_only_root) {
 	ASSERT_NO_FATAL_FAILURE(tree.remove(k));
 	ASSERT_TRUE(tree.empty());
 }
-
 
 TEST(AVL_Tree, delete_leaf) {
 	std::vector<int> k = { 3, 10, 1 };
@@ -284,4 +283,34 @@ TEST(AVL_Tree, delete_root_when_root_has_2_leaves) {
 	ASSERT_NE(tree.find(1), tree.end());
 	ASSERT_NE(tree.find(10), tree.end());
 	ASSERT_EQ(tree.find(3), tree.end());
+}
+
+// TODO add more deletion tests
+
+TEST(AVL_Tree, tree_of_trees_creation) {
+	AVL<int, AVL<int, char>> tree;
+	AVL<int, char> inner_tree;
+	ASSERT_TRUE(tree.insert(100, inner_tree));
+	ASSERT_TRUE((*tree.find(100)).insert(1, 'a'));
+}
+
+TEST(AVL_Tree, merge_all_keys_unique) {
+	std::vector<int> k1 = { 2, 16, 40, 31, 7, 32, 11, 17 };
+	std::vector<char> v1 = int2char(k1);
+	std::vector<int> k2 = { 10, 5, 18, 15, 22, 25 };
+	std::vector<char> v2 = int2char(k2);
+	AVL<int, char> tree1, tree2;
+	for (unsigned int i = 0; i < k1.size(); ++i) {
+		tree1.insert(k1[i], v1[i]);
+	}
+	for (unsigned int i = 0; i < k2.size(); ++i) {
+		tree2.insert(k2[i], v2[i]);
+	}
+	ASSERT_NO_FATAL_FAILURE(tree1.merge(tree2));
+	std::vector<int> merged;
+	merged.insert(merged.end(), k1.begin(), k1.end());
+	merged.insert(merged.end(), k2.begin(), k2.end());
+	for (auto k : merged) {
+		ASSERT_NE(tree1.find(k), tree1.end());
+	}
 }

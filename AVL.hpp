@@ -31,10 +31,14 @@ static void swap(T& a, T& b) {
  * Supports for ranged loops traversal. In-order used, i.e. items will be
  * sorted in ascending (according to key operator< definition) order.
  *
- * Requirements from Key: has operator < implemented, copy-constructible,
+ * @Iterators and references invalidation:
+ * All iterators are invalidated after each operation, that changes the tree.
+ * All references are valid after insertion, and invalidated after deletion.
+ *
+ * @Requirements from Key: has operator< implemented, copy-constructible,
  *     assignable.
- * Requirements from Value: Copy-constructible.
- *     Don't have to be default constructible.
+ * @Requirements from Value: Copy-constructible. Don't have to be default
+ *     constructible.
  *
  * If not defined otherwise, n is number of nodes in tree,
  * and memory complexity is O(1)
@@ -56,6 +60,8 @@ class AVL {
 						parent(nullptr) {
 			this->value = new Value(value);
 		}
+		Node(const Node&) = delete;
+		Node& operator=(const Node&) = delete;
 		~Node() {
 			delete value;
 		}
@@ -73,7 +79,7 @@ class AVL {
 
 		/* !IMPORTANT! iterator must be validated before.
 		 *     ++ on invalid iterators (e.g. end()) is undefined.
-		 * @Returns iterator next (in-order) node
+		 * @Return: iterator pointing to next (in-order) node
 		 */
 		inorderIterator& operator++() {
 			node = next_inorder(node);
@@ -96,9 +102,18 @@ class AVL {
 
 		/* !IMPORTANT! iterator must be validated before dereferencing.
 		 *     Dereferencing invalid iterators (e.g. end()) is undefined.
-		 * @Return: copy of value at node at iterator.
+		 * @Return: copy of value (not the key) at node at iterator.
 		 */
-		Value operator*() const {
+		Value& operator*() const {
+			return *(node->value);
+		}
+
+		/* Return copy of key. */
+		Key key() const {
+			return node->key;
+		}
+		/* Return accessible reference to value */
+		Value& value() const {
 			return *(node->value);
 		}
 	};
@@ -274,7 +289,7 @@ class AVL {
 	}
 
 	/* Assumes that tree does contain item with key k. */
-	static Node* remove_r(const Key& k, Node *r) {
+	static Node* remove_r(const Key& k, Node *r) { // FIXME
 		if (!r)
 			return r;
 		if (k < r->key) {
@@ -284,9 +299,13 @@ class AVL {
 		} else {
 			// TODO complete this
 			if (is_leaf(r)) {
+				if (r->parent) {
+					(is_leftchild(r) ? r->parent->left : r->parent->right) =
+							nullptr; // TODO refactor
+				}
 				delete r;
 				r = nullptr;
-			} else if (!r->right || !r->left) {
+			} else if (!r->right || !r->left) { // 1 child
 				Node *child = r->right ? r->right : r->left;
 				child->parent = r->parent;
 				if (r->parent) {
@@ -295,14 +314,47 @@ class AVL {
 				}
 				delete r;
 				r = child;
-			} else {
+			} else { // 2 children
 				Node* next = next_inorder(r);
 				aux::swap(r->value, next->value);
 				aux::swap(r->key, next->key);
 				remove_r(k, next);
 			}
 		}
-		return r;
+		return r; // TODO currently not AVL
+	}
+
+	static int size_r(Node *r) {
+		if (!r)
+			return 0;
+		return 1 + size_r(r->left) + size_r(r->right);
+	}
+
+	static void destroy_r(Node *r) {
+		if (!r)
+			return;
+		destroy_r(r->left);
+		destroy_r(r->right);
+		delete r;
+	}
+
+	/* Gets two sorted arrays, of keys and pointers to values
+	 * (to allow values to be not default-constructible)
+	 * Arrays must be sorted.
+	 * Constructs AVL tree recursively.
+	 */
+	static Node *tree_from_array(Key* k_arr, Value** v_arr, int from, int to) {
+		if (from > to)
+			return nullptr;
+		int mid = (from + to) / 2;
+		Node *tmp_root = new Node(k_arr[mid], *(v_arr[mid]));
+		tmp_root->left = tree_from_array(k_arr, v_arr, from, mid - 1);
+		if (tmp_root->left)
+			tmp_root->left->parent = tmp_root;
+		tmp_root->right = tree_from_array(k_arr, v_arr, mid + 1, to);
+		if (tmp_root->right)
+			tmp_root->right->parent = tmp_root;
+		return tmp_root;
 	}
 
 public:
@@ -324,7 +376,11 @@ public:
 	inorderIterator begin() const {
 		return inorderIterator(leftmost(root));
 	}
-
+	/*
+	 * @Return: iterator to empty/non-existing node.
+	 *     This iterator should be never dereferenced or incremented.
+	 * @Time complexity: O(1)
+	 */
 	inorderIterator end() const {
 		return inorderIterator();
 	}
@@ -365,11 +421,84 @@ public:
 	 *
 	 * If element with Key k isn't present - does nothing.
 	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
 	 */
 	void remove(const Key& k) {
 		if (find(k) == end())
 			return;
 		root = remove_r(k, root);
+	}
+
+	/*
+	 * @Return: number of nodes in tree
+	 * @Time complexity: O(n)
+	 * @Memory complexity: O(log(n))
+	 */
+	int size() const {
+		return size_r(root);
+	}
+
+	/* Frees all nodes
+	 *
+	 * @Time complexity: O(n)
+	 * @Memory complexity: O(log(n))
+	 */
+	void clear() {
+		destroy_r(root);
+		root = nullptr;
+	}
+
+	/* Efficient tree merge.
+	 * Left operand will contain all unique nodes from both trees,
+	 * right stays unchanged. All pointers, iterators and references of the
+	 * left tree are invalidated.
+	 *
+	 * If there's same keys, data from left tree will be taken.
+	 *
+	 * @Time complexity: O(m+n), where m and n are numbers of nodes in current
+	 *     and joining tree.
+	 * @Memory complexity: O(m+n)
+	 */
+	// TODO check case with same keys
+	void merge(const AVL<Key, Value>& t) {
+		int m_size = size() + t.size(); //O(m + n)
+		Key* keys = new Key[m_size];
+		Value** values = new Value*[m_size];
+		//output to arrays
+		auto l = begin(), r = t.begin(), l_end = end(), r_end = t.end();
+		int i = 0;
+		while (l != l_end || r != r_end) { //O(m + n)
+			if (l != l_end && r != r_end) {
+				if (r.key() < l.key()) {
+					keys[i] = r.key();
+					values[i] = new Value(r.value());
+					++r;
+				} else {
+					keys[i] = l.key();
+					values[i] = new Value(l.value());
+					++l;
+				}
+			} else if (l != l_end) {
+				keys[i] = l.key();
+				values[i] = new Value(l.value());
+				++l;
+			} else { // r != r_end
+				keys[i] = r.key();
+				values[i] = new Value(r.value()); //TODO refactor
+				++r;
+			}
+			++i;
+		}
+		m_size = i; //It may happen, that i<m+n because of repeating keys
+		Node * tmp_root = tree_from_array(keys, values, 0, m_size - 1);
+		clear();
+		root = tmp_root;
+		delete[] values;
+		delete[] keys;
+	}
+
+	~AVL() {
+		clear();
 	}
 
 };
