@@ -33,7 +33,7 @@ static void swap(T& a, T& b) {
  *     merging (for the left operand only).
  *
  * @Requirements from Key: has operator< implemented, copy-constructible,
- *     assignable.
+ *     assignable, default-constructible.
  * @Requirements from Value: Copy-constructible. Don't have to be default
  *     constructible.
  *
@@ -121,7 +121,7 @@ class AVL {
 	/* Test of keys equality, doesn't require == operator.
 	 */
 	static bool equal(const Key& k1, const Key& k2) {
-		return !(k1 < k2 || k1 > k2);
+		return !(k1 < k2 || k2 < k1);
 	}
 
 	/* Calculates actual height, based on subtrees of r.
@@ -358,7 +358,7 @@ class AVL {
 			return r;
 		if (k < r->key) {
 			r->left = remove_r(k, r->left);
-		} else if (k > r->key) {
+		} else if (r->key < k) {
 			r->right = remove_r(k, r->right);
 		} else {
 			if (is_leaf(r)) { // no children
