@@ -23,7 +23,7 @@ static void swap(T& a, T& b) {
 }
 
 /* AVL binary search tree.
- * Supports for ranged loops traversal. In-order used, i.e. items will be
+ * Supports 'for' ranged loops traversal. In-order used, i.e. items will be
  * sorted in ascending (according to key operator< definition) order.
  *
  * @Iterators and references invalidation:
@@ -37,7 +37,7 @@ static void swap(T& a, T& b) {
  * @Requirements from Value: Copy-constructible. Don't have to be default
  *     constructible.
  *
- * If not defined otherwise, n is number of nodes in tree,
+ * For each function, if not defined otherwise, n is number of nodes in tree,
  * and memory complexity is O(1)
  */
 template<typename Key, typename Value>
@@ -111,15 +111,14 @@ class AVL {
 		Key key() const {
 			return node->key;
 		}
-		/* Return accessible reference to value. Same as operator*,
+		/* Returns accessible reference to value. Same as operator*,
 		 * added for consistency with key() function */
 		Value& value() const {
 			return *(node->value);
 		}
 	};
 
-	/*
-	 * Test of keys equality, doesn't require == operator
+	/* Test of keys equality, doesn't require == operator.
 	 */
 	static bool equal(const Key& k1, const Key& k2) {
 		return !(k1 < k2 || k1 > k2);
@@ -127,6 +126,8 @@ class AVL {
 
 	/* Calculates actual height, based on subtrees of r.
 	 * Differs from height property: subtrees of r and r itself may be empty.
+	 *
+	 * @Return: height of r
 	 * @Time complexity: O(1)
 	 */
 	static int height(Node* r) {
@@ -136,12 +137,23 @@ class AVL {
 				r->left ? r->left->height : -1) + 1;
 	}
 
-	/* Undefined for empty nodes */
+	/* Balance fator in AVL trees is defined as following:
+	 * height(left_child) - height(right_child)
+	 * Assumes node isn't null.
+	 *
+	 * @Return: balance factor of r, as described.
+	 * @Time complexity: O(1)
+	 */
 	static int balance(Node* r) {
 		assert(r);
 		return height(r->left) - height(r->right);
 	}
 
+	/* Node is leaf if it has no children.
+	 *
+	 * @Return: true if node is leaf
+	 * @Time complexity: O(1)
+	 */
 	static bool is_leaf(Node* r) {
 		if (!r)
 			return false;
@@ -153,6 +165,7 @@ class AVL {
 	 *
 	 * @Return: false if r is null, root (root has no parent), or is right child.
 	 *     true if r has a parent and is it's left child.
+	 * @Time complexity: O(1)
 	 */
 	static bool is_leftchild(Node *r) {
 		if (!r || !r->parent)
@@ -162,8 +175,10 @@ class AVL {
 
 	/* Given some node returns it leftmost successor, or node itself,
 	 * if it has no left child. Node r may be null.
-	 * @Return: pointer to leftmost successor of r, or to r, if r has no left child.
-	 * @Time complexity: O(h), where h is the height of r's subtree.
+	 *
+	 * @Return: pointer to leftmost successor of r, or to r, if r has no left
+	 *     child.
+	 * @Time complexity: O(log(n))
 	 */
 	static Node* leftmost(Node* r) {
 		if (!r)
@@ -174,10 +189,15 @@ class AVL {
 		return r;
 	}
 
-	/*
+	/* Tree in-order traversal. Given node returns pointer to next one in-order.
+	 * Assumes node isn't null.
+	 *
 	 * @Return: pointer to next node in-order
+	 * @Time complexity: O(log(n)) in worst case, but full traversal
+	 *     takes O(n) time.
 	 */
 	static Node* next_inorder(Node* node) {
+		assert(node);
 		if (node->right)
 			return leftmost(node->right);
 		while (!is_leftchild(node) && node->parent) {
@@ -187,10 +207,12 @@ class AVL {
 	}
 
 	/* Decides which type of roll to apply, if needed.
-	 * If balance factor is valid (i.e. between -1 and 1),
-	 * @Return: updated root of rebalanced sub-tree.
+	 * If balance factor is valid (i.e. between -1 and 1), changes nothing.
+	 *
+	 * @Return: updated root of rebalanced sub-tree or given r if balance factor
+	 *     is valid.
 	 * @Time complexity: O(1)
-	 *  */
+	 */
 	static Node* check_and_roll(Node* r) {
 		if (balance(r) > 1) {
 			if (balance(r->left) >= 0) {
@@ -212,7 +234,8 @@ class AVL {
 	/* Changes child node of parent of given old_child node.
 	 * For nodes with no parent (i.e. root) does nothing.
 	 * Assumes old_child isn't null.
-	 * Used when swapping nodes in tree (e.g. rolls)
+	 * Used when swapping nodes in tree (e.g. rolls).
+	 * @Time complexity: O(1)
 	 */
 	static void set_child_of_parent(Node* old_child, Node* new_child) {
 		assert(old_child);
@@ -226,8 +249,9 @@ class AVL {
 	}
 
 	/* Changes parent pointer of given node children (if any) to point to the
-	 * given node. Used when swapping nodes in tree (e.g. rolls)
+	 * given node. Used when swapping nodes in tree (e.g. rolls).
 	 * Assumes parent isn't null.
+	 * @Time complexity: O(1)
 	 */
 	static void set_parent_of_children(Node* parent) {
 		assert(parent);
@@ -237,7 +261,11 @@ class AVL {
 			parent->right->parent = parent;
 	}
 
-	/* AVL Rolls. */
+	/* AVL Rolls.
+	 *
+	 * @Return: pointer to updated (after rebalancing) root node
+	 * @Time complexity: O(1)
+	 */
 	static Node* LL_roll(Node* r) {
 		Node *unbalanced = r;
 		r = r->left;
@@ -281,6 +309,8 @@ class AVL {
 	 *
 	 * @Return: nullptr if node with key k not present,
 	 *    pointer to node otherwise.
+	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
 	 */
 	static Node* find_r(const Key& k, Node* r) {
 		if (!r)
@@ -298,8 +328,9 @@ class AVL {
 	 * This function assumes, that tree doesn't contain an item with given key.
 	 *
 	 * @Return: pointer to updated (after rebalancing) root node
-	 * @Memory complexity: O(h), where h is the height of r's subtree.
-	 * */
+	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
+	 */
 	static Node* insert_r(const Key& k, const Value& v, Node* r) {
 		if (!r)
 			return new Node(k, v);
@@ -314,7 +345,14 @@ class AVL {
 		return check_and_roll(r);
 	}
 
-	/* Assumes that tree does contain item with key k. */
+	/* Recursively removes nodes from tree and rebalances it.
+	 * Root node of the tree may change due to deletion.
+	 * Assumes that tree does contain item with key k.
+	 *
+	 * @Return: updated root of the tree after removing node with key k.
+	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
+	 */
 	static Node* remove_r(const Key& k, Node *r) {
 		if (!r)
 			return r;
@@ -346,8 +384,11 @@ class AVL {
 		return check_and_roll(r);
 	}
 
-	/*
+	/* Given root node of (sub)tree returns number of nodes of that tree.
+	 *
 	 * @Return: number of nodes in the subtree of r
+	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
 	 */
 	static int size_r(Node *r) {
 		if (!r)
@@ -355,7 +396,11 @@ class AVL {
 		return 1 + size_r(r->left) + size_r(r->right);
 	}
 
-	/* Frees all nodes recursively */
+	/* Frees all nodes recursively
+	 *
+	 * @Time complexity: O(log(n))
+	 * @Memory complexity: O(log(n))
+	 */
 	static void destroy_r(Node *r) {
 		if (!r)
 			return;
@@ -412,7 +457,7 @@ class AVL {
 			if (l != l_end) {
 				current = l++;
 			} else { // r != r_end
-				current = r++; // TODO test uncovered
+				current = r++;
 			}
 			keys[i] = current.key();
 			values[i] = new Value(current.value());
@@ -431,7 +476,7 @@ public:
 	 * @Time complexity: O(1)
 	 */
 	AVL(const Key& k, const Value& v) :	root(nullptr) {
-		root = new Node(k, v); // TODO test uncovered
+		root = new Node(k, v);
 	}
 
 	/* Copy C'tor.
@@ -442,7 +487,7 @@ public:
 	 * @Memory complexity: O(m)
 	 * */
 	AVL(const AVL& t) :	root(nullptr) {
-		merge(t); // TODO test uncovered
+		merge(t);
 	}
 
 	/* Assignment operator.

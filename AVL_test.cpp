@@ -20,8 +20,46 @@ static std::vector<char> int2char(std::vector<int> v) {
 	return c;
 }
 
-TEST(AVL_Tree, simple_creation) {
-	AVL<int, char> tree;
+TEST(AVL_Tree, one_leaf_tree_constructor) {
+	const int k = 3;
+	const char v = int2char(k);
+	AVL<int, char> tree(k, v);
+	ASSERT_FALSE(tree.insert(k, v));
+}
+
+TEST(AVL_Tree, copy_constructing) {
+	std::vector<int> k1 = { 2, 16, 40, 31, 7, 32, 11, 17 };
+	std::vector<char> v1 = int2char(k1);
+	AVL<int, char> tree1;
+	for (unsigned int i = 0; i < k1.size(); ++i) {
+		tree1.insert(k1[i], v1[i]);
+	}
+	AVL<int, char> tree2(tree1);
+	for (auto i : k1) {
+		ASSERT_NE(tree2.find(i), tree2.end());
+	}
+}
+
+TEST(AVL_Tree, assignment) {
+	std::vector<int> k1 = { 2, 16, 40, 31, 7, 32, 11, 17 };
+	std::vector<char> v1 = int2char(k1);
+	std::vector<int> k2 = { 10, 5, 18, 15, 22, 25 };
+	std::vector<char> v2 = int2char(k2);
+	AVL<int, char> tree1;
+	for (unsigned int i = 0; i < k1.size(); ++i) {
+		tree1.insert(k1[i], v1[i]);
+	}
+	AVL<int, char> tree2;
+	for (unsigned int i = 0; i < k2.size(); ++i) {
+		tree2.insert(k2[i], v2[i]);
+	}
+	tree2 = tree1;
+	for (auto i : k1) {
+		ASSERT_NE(tree2.find(i), tree2.end());
+	}
+	for (auto i : k2) {
+		ASSERT_EQ(tree2.find(i), tree2.end());
+	}
 }
 
 TEST(AVL_Tree, begin_equals_end_empty_tree) {
