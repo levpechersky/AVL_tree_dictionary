@@ -423,6 +423,7 @@ class AVL {
 			return nullptr;
 		int mid = (from + to) / 2;
 		Node *tmp_root = new Node(k_arr[mid], *(v_arr[mid]));
+		delete v_arr[mid];
 		tmp_root->left = tree_from_array(k_arr, v_arr, from, mid - 1);
 		tmp_root->right = tree_from_array(k_arr, v_arr, mid + 1, to);
 		set_parent_of_children(tmp_root);
