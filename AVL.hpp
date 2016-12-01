@@ -50,15 +50,15 @@ class AVL {
 		Node *left, *right, *parent;
 		Node(const Key& key, const Value& value) :
 				key(key),
-				value(nullptr),
+				value(NULL),
 				height(0),
-				left(nullptr),
-				right(nullptr),
-				parent(nullptr) {
+				left(NULL),
+				right(NULL),
+				parent(NULL) {
 			this->value = new Value(value);
 		}
-		Node(const Node&) = delete;
-		Node& operator=(const Node&) = delete;
+//		Node(const Node&) = delete;
+//		Node& operator=(const Node&) = delete;
 		~Node() {
 			delete value;
 		}
@@ -69,7 +69,7 @@ class AVL {
 	class inorderIterator {
 		friend class AVL<Key, Value> ;
 		Node *node;
-		inorderIterator(Node* node = nullptr) :	node(node) {}
+		inorderIterator(Node* node = NULL) :	node(node) {}
 
 	public:
 
@@ -307,14 +307,14 @@ class AVL {
 	/*
 	 * Recursive search in tree.
 	 *
-	 * @Return: nullptr if node with key k not present,
+	 * @Return: NULL if node with key k not present,
 	 *    pointer to node otherwise.
 	 * @Time complexity: O(log(n))
 	 * @Memory complexity: O(log(n))
 	 */
 	static Node* find_r(const Key& k, Node* r) {
 		if (!r)
-			return nullptr;
+			return NULL;
 		if (equal(k, r->key)) {
 			return r;
 		} else if (k < r->key) {
@@ -362,9 +362,9 @@ class AVL {
 			r->right = remove_r(k, r->right);
 		} else {
 			if (is_leaf(r)) { // no children
-				set_child_of_parent(r, nullptr);
+				set_child_of_parent(r, NULL);
 				delete r;
-				r = nullptr;
+				r = NULL;
 			} else if (!r->right || !r->left) { // 1 child
 				Node *child = r->right ? r->right : r->left;
 				child->parent = r->parent;
@@ -420,7 +420,7 @@ class AVL {
 	 */
 	static Node *tree_from_array(Key* k_arr, Value** v_arr, int from, int to) {
 		if (from > to)
-			return nullptr;
+			return NULL;
 		int mid = (from + to) / 2;
 		Node *tmp_root = new Node(k_arr[mid], *(v_arr[mid]));
 		delete v_arr[mid];
@@ -444,7 +444,7 @@ class AVL {
 	 * @Memory complexity: O(m+n)
 	 * */
 	int trees_to_arrays(const AVL<Key, Value>& t, Key* keys, Value** values) {
-		auto l = begin(), r = t.begin(), l_end = end(), r_end = t.end();
+		inorderIterator l = begin(), r = t.begin(), l_end = end(), r_end = t.end();
 		int i = 0;
 		while (l != l_end || r != r_end) {
 			inorderIterator current;
@@ -471,12 +471,12 @@ public:
 	/* Default C'tor. Creates empty tree.
 	 * @Time complexity: O(1)
 	 */
-	AVL() :	root(nullptr) {}
+	AVL() :	root(NULL) {}
 	/* Alternative C'tor. Creates tree, which consists of a single leaf
 	 * with given key and value
 	 * @Time complexity: O(1)
 	 */
-	AVL(const Key& k, const Value& v) :	root(nullptr) {
+	AVL(const Key& k, const Value& v) :	root(NULL) {
 		root = new Node(k, v);
 	}
 
@@ -487,7 +487,7 @@ public:
 	 * @Time complexity: O(m), where m is number of nodes in tree t.
 	 * @Memory complexity: O(m)
 	 * */
-	AVL(const AVL& t) :	root(nullptr) {
+	AVL(const AVL& t) :	root(NULL) {
 		merge(t);
 	}
 
@@ -592,7 +592,7 @@ public:
 	 */
 	void clear() {
 		destroy_r(root);
-		root = nullptr;
+		root = NULL;
 	}
 
 	/* Efficient tree merge.
