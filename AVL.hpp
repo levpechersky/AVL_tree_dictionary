@@ -427,6 +427,7 @@ class AVL {
 		tmp_root->left = tree_from_array(k_arr, v_arr, from, mid - 1);
 		tmp_root->right = tree_from_array(k_arr, v_arr, mid + 1, to);
 		set_parent_of_children(tmp_root);
+		tmp_root->height = height(tmp_root);
 		return tmp_root;
 	}
 
